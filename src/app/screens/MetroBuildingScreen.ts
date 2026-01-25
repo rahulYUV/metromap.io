@@ -26,7 +26,6 @@ import {
   Direction,
   createSegmentKey,
   getSegmentOrientation,
-  getPerpendicularOffset,
 } from "../game/pathfinding/LinePath";
 import type { LineSegment, Waypoint } from "../game/pathfinding/LinePath";
 
@@ -46,7 +45,7 @@ const STATION_COLOR = 0xffffff;
 const STATION_BORDER_COLOR = 0x000000;
 const STATION_BORDER_WIDTH = 2;
 const LINE_WIDTH = 4;
-const LINE_OFFSET = 6; // Offset for parallel lines (should be > LINE_WIDTH for clear separation)
+const LINE_OFFSET = 4; // Offset for parallel lines
 
 type StationMode = "NONE" | "ADDING" | "REMOVING";
 type LineMode = "NONE" | "BUILDING";
@@ -721,14 +720,31 @@ export class MetroBuildingScreen extends Container {
         const centerOffset = (totalLines - 1) / 2;
         const normalizedPosition = positionInList - centerOffset;
 
-        // Apply offset perpendicular to the segment direction
-        // Use the entry angle to determine perpendicular direction
-        const perpendicular = getPerpendicularOffset(segment.entryAngle);
+        // Apply offset based on segment orientation (horizontal/vertical/diagonal)
+        // This uses the OVERALL direction from source to destination, not individual legs
+        const dx = to.vertexX - from.vertexX;
+        const dy = to.vertexY - from.vertexY;
 
         // Scale the offset (LINE_OFFSET is in pixels, convert to grid units)
         const offsetAmount = (normalizedPosition * LINE_OFFSET) / TILE_SIZE;
-        offsetX = perpendicular.dx * offsetAmount;
-        offsetY = perpendicular.dy * offsetAmount;
+
+        // For horizontal segments, offset in Y; for vertical, offset in X
+        // For diagonal, offset perpendicular to the diagonal
+        if (sharingInfo.orientation === "HORIZONTAL") {
+          // Horizontal segment: offset vertically
+          offsetY = offsetAmount;
+        } else if (sharingInfo.orientation === "VERTICAL") {
+          // Vertical segment: offset horizontally
+          offsetX = offsetAmount;
+        } else {
+          // Diagonal segment: offset perpendicular
+          // Perpendicular to (dx, dy) is (-dy, dx) normalized
+          const length = Math.sqrt(dx * dx + dy * dy);
+          if (length > 0) {
+            offsetX = (-dy / length) * offsetAmount;
+            offsetY = (dx / length) * offsetAmount;
+          }
+        }
       }
 
       segmentOffsets.push({ offsetX, offsetY });

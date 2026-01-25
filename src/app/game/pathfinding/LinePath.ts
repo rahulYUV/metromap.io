@@ -79,41 +79,6 @@ export function getSegmentOrientation(
 }
 
 /**
- * Get the perpendicular offset vector for a given direction
- * Returns normalized (dx, dy) perpendicular to the line direction
- * The perpendicular is chosen to be consistent (clockwise rotation)
- */
-export function getPerpendicularOffset(direction: Direction): {
-  dx: number;
-  dy: number;
-} {
-  // For diagonals, normalize to unit length (divide by sqrt(2))
-  const diag = 1 / Math.SQRT2;
-
-  // Rotate 90 degrees clockwise to get perpendicular
-  switch (direction) {
-    case Direction.EAST:
-      return { dx: 0, dy: 1 }; // Offset in Y
-    case Direction.WEST:
-      return { dx: 0, dy: -1 }; // Offset in Y (opposite)
-    case Direction.SOUTH:
-      return { dx: -1, dy: 0 }; // Offset in X
-    case Direction.NORTH:
-      return { dx: 1, dy: 0 }; // Offset in X (opposite)
-    case Direction.SOUTHEAST:
-      return { dx: -diag, dy: -diag }; // Perpendicular to SE is SW direction
-    case Direction.NORTHWEST:
-      return { dx: diag, dy: diag }; // Perpendicular to NW is NE direction
-    case Direction.SOUTHWEST:
-      return { dx: -diag, dy: diag }; // Perpendicular to SW is NW direction
-    case Direction.NORTHEAST:
-      return { dx: diag, dy: -diag }; // Perpendicular to NE is SE direction
-    default:
-      return { dx: 0, dy: 1 };
-  }
-}
-
-/**
  * Get direction enum from dx/dy signs
  */
 function getDirection(dx: number, dy: number): Direction {
