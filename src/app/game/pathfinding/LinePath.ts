@@ -148,19 +148,30 @@ function getAlignmentType(
 }
 
 /**
- * Calculate the knee point using the "greedy diagonal" approach
+ * Calculate the deflection angle at a station when a line enters and exits
+ * Returns the smaller angle between the two directions (0-180)
  *
- * The greedy diagonal algorithm:
- * 1. Find the shorter of |dx| and |dy|
- * 2. Travel diagonally for that distance (clearing the shorter axis)
- * 3. Then travel straight (H or V) for the remaining distance
- *
- * This naturally creates 45-degree bends in the Harry Beck style
+ * For smooth visual flow, we want this angle to be CLOSE TO 180° (straight through)
+ * Sharp turns have angles close to 0° or acute angles < 90°
  */
-function calculateKneePoint(
+function calculateDeflectionAngle(
+  incomingAngle: Direction,
+  outgoingAngle: Direction,
+): number {
+  const diff = Math.abs(incomingAngle - outgoingAngle);
+  // The actual deflection is the smaller of the two possible angles
+  // e.g., 330° difference = 30° deflection (the line bends 30° not 330°)
+  return Math.min(diff, 360 - diff);
+}
+
+/**
+ * Calculate all possible knee points for a misaligned segment
+ * Returns both diagonal-first and straight-first options
+ */
+function calculateKneePoints(
   from: Station,
   to: Station,
-): { x: number; y: number; diagonalFirst: boolean } {
+): Array<{ x: number; y: number; diagonalFirst: boolean }> {
   const dx = to.vertexX - from.vertexX;
   const dy = to.vertexY - from.vertexY;
 
@@ -171,46 +182,116 @@ function calculateKneePoint(
   const signX = dx > 0 ? 1 : -1;
   const signY = dy > 0 ? 1 : -1;
 
-  // Use greedy diagonal: travel diagonally for the shorter distance
   const diagonalDistance = Math.min(absDx, absDy);
+  const kneeOptions: Array<{ x: number; y: number; diagonalFirst: boolean }> =
+    [];
 
-  // Decide whether to go diagonal-first or straight-first
-  // Diagonal-first is the classic Beck style
-  const diagonalFirst = true;
+  // Option 1: Diagonal-first (classic Beck style)
+  const diagonalFirstKnee = {
+    x: from.vertexX + signX * diagonalDistance,
+    y: from.vertexY + signY * diagonalDistance,
+    diagonalFirst: true,
+  };
+  kneeOptions.push(diagonalFirstKnee);
 
-  let kneeX: number;
-  let kneeY: number;
-
-  if (diagonalFirst) {
-    // Start diagonal, end straight
-    kneeX = from.vertexX + signX * diagonalDistance;
-    kneeY = from.vertexY + signY * diagonalDistance;
+  // Option 2: Straight-first (alternative bend)
+  let straightFirstKnee: { x: number; y: number; diagonalFirst: boolean };
+  if (absDx > absDy) {
+    // Go horizontal first, then diagonal
+    const straightDistance = absDx - absDy;
+    straightFirstKnee = {
+      x: from.vertexX + signX * straightDistance,
+      y: from.vertexY,
+      diagonalFirst: false,
+    };
   } else {
-    // Start straight, end diagonal
-    if (absDx > absDy) {
-      // Go horizontal first, then diagonal
-      const straightDistance = absDx - absDy;
-      kneeX = from.vertexX + signX * straightDistance;
-      kneeY = from.vertexY;
+    // Go vertical first, then diagonal
+    const straightDistance = absDy - absDx;
+    straightFirstKnee = {
+      x: from.vertexX,
+      y: from.vertexY + signY * straightDistance,
+      diagonalFirst: false,
+    };
+  }
+  kneeOptions.push(straightFirstKnee);
+
+  return kneeOptions;
+}
+
+/**
+ * Calculate the knee point that optimizes the angle at the middle station
+ * when connecting three stations A->B->C
+ */
+function calculateOptimalKneePoint(
+  from: Station,
+  to: Station,
+  nextAngle: Direction | null,
+): { x: number; y: number; diagonalFirst: boolean } {
+  const kneeOptions = calculateKneePoints(from, to);
+
+  // If no next segment, use default (diagonal-first)
+  if (nextAngle === null) {
+    return kneeOptions[0];
+  }
+
+  const dx = to.vertexX - from.vertexX;
+  const dy = to.vertexY - from.vertexY;
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+  const signX = dx > 0 ? 1 : -1;
+  const signY = dy > 0 ? 1 : -1;
+
+  // Evaluate each knee option by the deflection angle it creates at station 'to'
+  let bestKnee = kneeOptions[0];
+  let smallestDeflection = Infinity;
+
+  for (const knee of kneeOptions) {
+    // Calculate the exit angle from this knee option
+    let exitAngle: Direction;
+
+    if (knee.diagonalFirst) {
+      // Second segment is straight
+      if (absDx > absDy) {
+        exitAngle = signX > 0 ? Direction.EAST : Direction.WEST;
+      } else {
+        exitAngle = signY > 0 ? Direction.SOUTH : Direction.NORTH;
+      }
     } else {
-      // Go vertical first, then diagonal
-      const straightDistance = absDy - absDx;
-      kneeX = from.vertexX;
-      kneeY = from.vertexY + signY * straightDistance;
+      // Second segment is diagonal
+      exitAngle = getDirection(signX, signY);
+    }
+
+    // Calculate the deflection angle at station 'to'
+    // The line arrives at 'to' with exitAngle and leaves with nextAngle
+    const deflection = calculateDeflectionAngle(exitAngle, nextAngle);
+
+    // We want MINIMUM deflection (closest to 180° = straight through)
+    // deflection of 0° = line goes straight through (180° visual angle)
+    // deflection of 45° = gentle curve (135° visual angle)
+    // deflection of 90° = right angle turn (90° visual angle)
+    // deflection of 135° = sharp turn (45° visual angle)
+    // deflection of 180° = U-turn (0° visual angle - very sharp!)
+    //
+    // So we minimize deflection to maximize smoothness
+    if (deflection < smallestDeflection) {
+      smallestDeflection = deflection;
+      bestKnee = knee;
     }
   }
 
-  return { x: kneeX, y: kneeY, diagonalFirst };
+  return bestKnee;
 }
 
 /**
  * Calculate path segment between two stations using octilinear routing
+ * @param from - Starting station
+ * @param to - Ending station
+ * @param nextAngle - The direction of the next segment (for optimizing bends at 'to')
  */
 export function calculateSegmentPath(
   from: Station,
   to: Station,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _previousAngle: Direction | null,
+  nextAngle: Direction | null,
 ): LineSegment {
   const dx = to.vertexX - from.vertexX;
   const dy = to.vertexY - from.vertexY;
@@ -250,8 +331,8 @@ export function calculateSegmentPath(
   }
 
   // Scenario 2: 45-degree transition (misaligned stations)
-  // Use greedy diagonal approach to find the knee point
-  const knee = calculateKneePoint(from, to);
+  // Find optimal knee point that creates best angle with next segment
+  const knee = calculateOptimalKneePoint(from, to, nextAngle);
 
   const absDx = Math.abs(dx);
   const absDy = Math.abs(dy);

@@ -11,7 +11,13 @@ import type { MapGrid } from "../game/models/MapGrid";
 import type { Station } from "../game/models/Station";
 import { generateStationId } from "../game/models/Station";
 import type { GameState } from "../game/models/GameState";
-import { createGameState } from "../game/models/GameState";
+import {
+  createGameState,
+  addLine,
+  addStation,
+  saveGameState,
+  clearSavedGame,
+} from "../game/models/GameState";
 import type { MetroLine, LineColor } from "../game/models/MetroLine";
 import {
   LINE_COLORS,
@@ -22,6 +28,7 @@ import {
 } from "../game/models/MetroLine";
 import {
   calculateSegmentPath,
+  calculateSnapAngle,
   DIRECTION_VECTORS,
   Direction,
   createSegmentKey,
@@ -61,6 +68,7 @@ export class MetroBuildingScreen extends Container {
   private removeStationButton: FlatButton;
   private addLineButton: FlatButton;
   private completeLineButton: FlatButton;
+  private resetButton: FlatButton;
   private showResidentialButton: FlatButton;
   private showOfficeButton: FlatButton;
   private showDefaultButton: FlatButton;
@@ -182,6 +190,17 @@ export class MetroBuildingScreen extends Container {
     this.completeLineButton.onPress.connect(() => this.completeLine());
     this.completeLineButton.visible = false;
     this.addChild(this.completeLineButton);
+
+    // Reset button (top right)
+    this.resetButton = new FlatButton({
+      text: "Reset",
+      width: 100,
+      height: 40,
+      fontSize: 16,
+      backgroundColor: 0xe74c3c,
+    });
+    this.resetButton.onPress.connect(() => this.resetGame());
+    this.addChild(this.resetButton);
 
     // Create color picker buttons
     this.createColorButtons();
@@ -332,7 +351,13 @@ export class MetroBuildingScreen extends Container {
       isLoop: isLineLoop(this.currentLine.stationIds),
     };
 
-    this.gameState.lines.push(line);
+    // Add line with duplicate color guard
+    const success = addLine(this.gameState, line);
+    if (!success) {
+      this.instructionLabel.text = `Error: ${line.color} line already exists!`;
+      return;
+    }
+
     console.log(
       `Created ${line.color} line with ${line.stationIds.length} stations`,
     );
@@ -351,6 +376,22 @@ export class MetroBuildingScreen extends Container {
   }
 
   /**
+   * Reset the game - clear save and return to map picker
+   */
+  private async resetGame(): Promise<void> {
+    // Clear saved game
+    clearSavedGame();
+    console.log("Game reset - saved data cleared");
+
+    // Import MapPickerScreen dynamically to avoid circular dependency
+    const { MapPickerScreen } = await import("./MapPickerScreen");
+    const { engine } = await import("../getEngine");
+
+    // Navigate back to map picker
+    await engine().navigation.showScreen(MapPickerScreen);
+  }
+
+  /**
    * Set the map to display
    */
   public setMap(map: MapGrid): void {
@@ -358,6 +399,17 @@ export class MetroBuildingScreen extends Container {
     this.gameState = createGameState(map.seed, map);
     this.mapRenderer.renderMap(map);
     this.drawMapBackground();
+    this.drawLines();
+  }
+
+  /**
+   * Load game state (for restoring saved game)
+   */
+  public setGameState(gameState: GameState): void {
+    this.gameState = gameState;
+    this.mapRenderer.renderMap(gameState.map);
+    this.drawMapBackground();
+    this.drawStations();
     this.drawLines();
   }
 
@@ -484,7 +536,7 @@ export class MetroBuildingScreen extends Container {
     }
 
     // Add the station
-    this.addStation(vertexX, vertexY);
+    this.addStationAtVertex(vertexX, vertexY);
   }
 
   /**
@@ -502,6 +554,9 @@ export class MetroBuildingScreen extends Container {
     // Remove the station
     this.gameState.stations.splice(index, 1);
     console.log(`Removed station at vertex (${vertexX}, ${vertexY})`);
+
+    // Save state after removal
+    saveGameState(this.gameState);
 
     // Redraw stations
     this.drawStations();
@@ -532,14 +587,14 @@ export class MetroBuildingScreen extends Container {
   /**
    * Add a station at the given vertex
    */
-  private addStation(vertexX: number, vertexY: number): void {
+  private addStationAtVertex(vertexX: number, vertexY: number): void {
     const station: Station = {
       id: generateStationId(vertexX, vertexY),
       vertexX,
       vertexY,
     };
 
-    this.gameState.stations.push(station);
+    addStation(this.gameState, station);
     console.log(
       `Added station ${station.id} at vertex (${vertexX}, ${vertexY})`,
     );
@@ -696,13 +751,19 @@ export class MetroBuildingScreen extends Container {
     // Calculate all segments with waypoints and their offsets
     const segments: LineSegment[] = [];
     const segmentOffsets: { offsetX: number; offsetY: number }[] = [];
-    let previousAngle: Direction | null = null;
 
     for (let i = 0; i < stations.length - 1; i++) {
       const from = stations[i];
       const to = stations[i + 1];
 
-      const segment = calculateSegmentPath(from, to, previousAngle);
+      // Look ahead to the next segment to optimize angles at intermediate stations
+      let nextAngle: Direction | null = null;
+      if (i < stations.length - 2) {
+        const nextStation = stations[i + 2];
+        nextAngle = calculateSnapAngle(to, nextStation);
+      }
+
+      const segment = calculateSegmentPath(from, to, nextAngle);
       segments.push(segment);
 
       // Calculate offset for this segment based on sharing info
@@ -748,7 +809,6 @@ export class MetroBuildingScreen extends Container {
       }
 
       segmentOffsets.push({ offsetX, offsetY });
-      previousAngle = segment.exitAngle;
     }
 
     // Render the complete line with offsets
@@ -950,6 +1010,10 @@ export class MetroBuildingScreen extends Container {
     this.titleLabel.x = centerX;
     this.titleLabel.y = 30;
 
+    // Reset button at top right
+    this.resetButton.x = width - 120;
+    this.resetButton.y = 30;
+
     // Instructions below title
     this.instructionLabel.x = centerX;
     this.instructionLabel.y = 70;
@@ -1019,6 +1083,7 @@ export class MetroBuildingScreen extends Container {
       this.addStationButton,
       this.removeStationButton,
       this.addLineButton,
+      this.resetButton,
       this.showDefaultButton,
       this.showResidentialButton,
       this.showOfficeButton,
