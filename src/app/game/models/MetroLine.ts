@@ -46,11 +46,14 @@ export const LINE_COLOR_HEX: Record<LineColor, number> = {
   grey: 0x95a5a6,
 };
 
+import type { Train } from "./Train";
+
 export interface MetroLine {
   id: string; // Unique line ID
   color: LineColor;
   stationIds: string[]; // Ordered list of station IDs this line connects
   isLoop: boolean; // True if line returns to starting station
+  trains: Train[]; // Trains running on this line
 }
 
 /**

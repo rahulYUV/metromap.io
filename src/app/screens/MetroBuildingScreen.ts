@@ -373,6 +373,7 @@ export class MetroBuildingScreen extends Container {
       color: this.currentLine.color,
       stationIds: this.currentLine.stationIds,
       isLoop: isLineLoop(this.currentLine.stationIds),
+      trains: [],
     };
 
     // Add line with duplicate color guard
@@ -806,6 +807,7 @@ export class MetroBuildingScreen extends Container {
         color: this.currentLine.color,
         stationIds: this.currentLine.stationIds,
         isLoop: false,
+        trains: [],
       };
       this.drawLine(tempLine, this.gameState.lines.length, segmentMap, true);
     }
