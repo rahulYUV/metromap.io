@@ -359,16 +359,8 @@ export class MetroSimulationScreen extends Container {
           train.currentStationIdx = train.targetStationIdx;
           train.progress = 0; // Reset progress (lose overflow for simplicity or can carry over)
 
-          // Handle passenger boarding and alighting
-          const currentStationId = line.stationIds[train.currentStationIdx];
-          const currentStation = this.gameState.stations.find(
-            (s) => s.id === currentStationId,
-          );
-          if (currentStation) {
-            updatePassengerMovement(train, currentStation, this.gameState);
-          }
-
-          // Determine next target
+          // Determine next target and direction BEFORE passenger boarding
+          // This ensures passengers see the correct direction when deciding to board
           if (line.isLoop) {
             // Circular movement
             if (train.direction === 1) {
@@ -398,6 +390,15 @@ export class MetroSimulationScreen extends Container {
                 train.targetStationIdx = train.currentStationIdx - 1;
               }
             }
+          }
+
+          // Handle passenger boarding and alighting AFTER direction is set
+          const currentStationId = line.stationIds[train.currentStationIdx];
+          const currentStation = this.gameState.stations.find(
+            (s) => s.id === currentStationId,
+          );
+          if (currentStation) {
+            updatePassengerMovement(train, currentStation, this.gameState);
           }
 
           // Calculate new path

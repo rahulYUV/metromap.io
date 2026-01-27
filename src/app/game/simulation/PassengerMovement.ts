@@ -34,7 +34,7 @@ function isTrainHeadingTowards(
 }
 
 /**
- * Get the line that connects two adjacent stations in a passenger's path
+ * Get the line that connects two stations in a passenger's path
  * Returns the line ID if found, null otherwise
  */
 function getLineConnectingStations(
@@ -46,8 +46,8 @@ function getLineConnectingStations(
     const fromIdx = line.stationIds.indexOf(fromStationId);
     const toIdx = line.stationIds.indexOf(toStationId);
 
-    // Both stations must be on the line and adjacent
-    if (fromIdx !== -1 && toIdx !== -1 && Math.abs(fromIdx - toIdx) === 1) {
+    // Both stations must be on the line (don't need to be adjacent)
+    if (fromIdx !== -1 && toIdx !== -1) {
       return line.id;
     }
   }
