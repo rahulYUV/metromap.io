@@ -643,6 +643,7 @@ export class MetroBuildingScreen extends Container {
       id: generateStationId(vertexX, vertexY),
       vertexX,
       vertexY,
+      passengers: [],
     };
 
     addStation(this.gameState, station);

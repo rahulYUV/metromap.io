@@ -6,6 +6,7 @@
 import type { MapGrid } from "./MapGrid";
 import type { Station } from "./Station";
 import type { MetroLine, LineColor } from "./MetroLine";
+import type { Passenger } from "./Passenger";
 import { storage } from "../../../engine/utils/storage";
 
 const SAVE_GAME_KEY = "metromap-saved-game";
@@ -15,6 +16,7 @@ export interface GameState {
   map: MapGrid;
   stations: Station[];
   lines: MetroLine[];
+  passengers: Passenger[]; // Active passengers in the system (waiting or traveling)
   simulationTime: number; // Unix timestamp in milliseconds
   // Future: trains, passengers, score, etc.
 }
@@ -30,6 +32,7 @@ export function createGameState(seed: number, map: MapGrid): GameState {
     map,
     stations: [],
     lines: [],
+    passengers: [],
     simulationTime: startDate.getTime(),
   };
 }
@@ -95,6 +98,20 @@ export function loadGameState(): GameState | null {
       if (!gameState.simulationTime || isNaN(gameState.simulationTime)) {
         const startDate = new Date("2025-01-01T08:00:00");
         gameState.simulationTime = startDate.getTime();
+      }
+
+      // Ensure passengers array exists (for backward compatibility)
+      if (!gameState.passengers) {
+        gameState.passengers = [];
+      }
+
+      // Ensure each station has a passengers array (for backward compatibility)
+      if (gameState.stations) {
+        gameState.stations.forEach((station) => {
+          if (!station.passengers) {
+            station.passengers = [];
+          }
+        });
       }
 
       return gameState;

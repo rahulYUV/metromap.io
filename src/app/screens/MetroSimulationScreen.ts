@@ -14,6 +14,7 @@ import { FlatButton } from "../ui/FlatButton";
 import { Label } from "../ui/Label";
 import type { MetroLine } from "../game/models/MetroLine";
 import { Train, createTrain } from "../game/models/Train";
+import { updatePassengerSpawning } from "../game/simulation/PassengerSpawner";
 import {
   calculateSegmentPath,
   calculateSnapAngle,
@@ -273,6 +274,15 @@ export class MetroSimulationScreen extends Container {
     // Update clock display
     const currentDate = new Date(this.gameState.simulationTime);
     this.clockLabel.text = this.formatDateTime(currentDate);
+
+    // Update passenger spawning
+    // We pass real delta seconds scaled by speedMultiplier to reflect game time progression?
+    // The spawner uses BASE_SPAWN_RATE (passengers per game-minute).
+    // So we should pass the *game time delta* in minutes?
+    // Or just pass seconds and let spawner handle it?
+    // The current implementation of spawner takes 'deltaSeconds' and multiplies by rate.
+    // If rate is "per second", then passing real delta * multiplier simulates acceleration.
+    updatePassengerSpawning(this.gameState, deltaSeconds * speedMultiplier);
 
     // Update trains
     this.updateTrains(deltaSeconds * movementMultiplier);

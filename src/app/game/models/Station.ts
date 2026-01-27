@@ -2,10 +2,13 @@
  * Station data model for MetroMap.io
  */
 
+import type { Passenger } from "./Passenger";
+
 export interface Station {
   id: string; // Format: "xxYY" where xx and yy are 2-digit vertex coordinates
   vertexX: number; // Vertex grid coordinate (0-48 for width 48)
   vertexY: number; // Vertex grid coordinate (0-32 for height 32)
+  passengers: Passenger[]; // Queue of passengers waiting at this station
 }
 
 /**
