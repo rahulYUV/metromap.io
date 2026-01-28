@@ -25,12 +25,12 @@ import {
 } from "../game/pathfinding/LinePath";
 
 // Time progression speeds (milliseconds per real second)
-const SPEED_1X = 5 * 60 * 1000; // 5 minutes per second (12 seconds = 1 hour)
-const SPEED_2X = 10 * 60 * 1000; // 10 minutes per second (6 seconds = 1 hour)
-const SPEED_4X = 20 * 60 * 1000; // 20 minutes per second (3 seconds = 1 hour)
-const SPEED_12X = 60 * 60 * 1000; // 60 minutes per second (1 second = 1 hour)
+// 1 week (user time 1 min) = 7 * 24 * 60 * 60 * 1000 / 60 = 10,080,000 ms/sec
+const SPEED_1X = (7 * 24 * 60 * 60 * 1000) / 60;
+const SPEED_2X = SPEED_1X * 2;
+const SPEED_4X = SPEED_1X * 4;
 
-type SimulationSpeed = "1x" | "2x" | "4x" | "12x";
+type SimulationSpeed = "1x" | "2x" | "4x";
 
 export class MetroSimulationScreen extends Container {
   /** Assets bundles required by this screen */
@@ -43,7 +43,6 @@ export class MetroSimulationScreen extends Container {
   private speed1xButton: FlatButton;
   private speed2xButton: FlatButton;
   private speed4xButton: FlatButton;
-  private speed12xButton: FlatButton;
 
   private mapRenderer: MapRenderer;
   private metroRenderer: MetroRenderer;
@@ -121,16 +120,6 @@ export class MetroSimulationScreen extends Container {
     this.speed4xButton.onPress.connect(() => this.setSpeed("4x"));
     this.addChild(this.speed4xButton);
 
-    this.speed12xButton = new FlatButton({
-      text: "12x",
-      width: 60,
-      height: 50,
-      fontSize: 18,
-      backgroundColor: 0x555555,
-    });
-    this.speed12xButton.onPress.connect(() => this.setSpeed("12x"));
-    this.addChild(this.speed12xButton);
-
     // Map display container
     this.mapContainer = new Container();
     this.addChild(this.mapContainer);
@@ -181,8 +170,6 @@ export class MetroSimulationScreen extends Container {
       (this.speed2xButton.defaultView as Graphics).tint = 0x888888; // Gray
       this.speed4xButton.alpha = 0.7;
       (this.speed4xButton.defaultView as Graphics).tint = 0x888888; // Gray
-      this.speed12xButton.alpha = 0.7;
-      (this.speed12xButton.defaultView as Graphics).tint = 0x888888; // Gray
     } else if (speed === "2x") {
       this.speed1xButton.alpha = 0.7;
       (this.speed1xButton.defaultView as Graphics).tint = 0x888888; // Gray
@@ -190,8 +177,6 @@ export class MetroSimulationScreen extends Container {
       (this.speed2xButton.defaultView as Graphics).tint = 0x4a90e2; // Blue
       this.speed4xButton.alpha = 0.7;
       (this.speed4xButton.defaultView as Graphics).tint = 0x888888; // Gray
-      this.speed12xButton.alpha = 0.7;
-      (this.speed12xButton.defaultView as Graphics).tint = 0x888888; // Gray
     } else if (speed === "4x") {
       this.speed1xButton.alpha = 0.7;
       (this.speed1xButton.defaultView as Graphics).tint = 0x888888; // Gray
@@ -199,17 +184,6 @@ export class MetroSimulationScreen extends Container {
       (this.speed2xButton.defaultView as Graphics).tint = 0x888888; // Gray
       this.speed4xButton.alpha = 1.0;
       (this.speed4xButton.defaultView as Graphics).tint = 0x4a90e2; // Blue
-      this.speed12xButton.alpha = 0.7;
-      (this.speed12xButton.defaultView as Graphics).tint = 0x888888; // Gray
-    } else if (speed === "12x") {
-      this.speed1xButton.alpha = 0.7;
-      (this.speed1xButton.defaultView as Graphics).tint = 0x888888; // Gray
-      this.speed2xButton.alpha = 0.7;
-      (this.speed2xButton.defaultView as Graphics).tint = 0x888888; // Gray
-      this.speed4xButton.alpha = 0.7;
-      (this.speed4xButton.defaultView as Graphics).tint = 0x888888; // Gray
-      this.speed12xButton.alpha = 1.0;
-      (this.speed12xButton.defaultView as Graphics).tint = 0x4a90e2; // Blue
     }
   }
 
@@ -218,6 +192,18 @@ export class MetroSimulationScreen extends Container {
    */
   private async stopSimulation(): Promise<void> {
     this.isRunning = false;
+
+    if (!this.gameState) {
+      console.warn(
+        "MetroSimulationScreen: gameState is undefined during stopSimulation",
+      );
+      // If we don't have game state, we probably shouldn't try to save it or pass it back
+      // But we should still navigate back to avoid being stuck
+      const { MetroBuildingScreen } = await import("./MetroBuildingScreen");
+      const { engine } = await import("../getEngine");
+      await engine().navigation.showScreen(MetroBuildingScreen);
+      return;
+    }
 
     // Save current state
     saveGameState(this.gameState);
@@ -263,10 +249,9 @@ export class MetroSimulationScreen extends Container {
         speedMultiplier = SPEED_4X;
         movementMultiplier = 4;
         break;
-      case "12x":
-        speedMultiplier = SPEED_12X;
-        movementMultiplier = 12;
-        break;
+      default:
+        speedMultiplier = SPEED_1X;
+        movementMultiplier = 1;
     }
 
     // Update simulation time
@@ -278,10 +263,6 @@ export class MetroSimulationScreen extends Container {
     this.clockLabel.text = this.formatDateTime(currentDate);
 
     // Update passenger spawning
-    // We pass real delta seconds scaled by speedMultiplier to reflect game time progression?
-    // The spawner uses BASE_SPAWN_RATE (passengers per game-minute).
-    // So we should pass the *game time delta* in minutes?
-    // Or just pass seconds and let spawner handle it?
     // The current implementation of spawner takes 'deltaSeconds' and multiplies by rate.
     // If rate is "per second", then passing real delta * multiplier simulates acceleration.
     updatePassengerSpawning(this.gameState, deltaSeconds * speedMultiplier);
@@ -595,24 +576,27 @@ export class MetroSimulationScreen extends Container {
     const controlsY = 80;
 
     // Stop Simulation Button (Left)
-    this.stopButton.x = 20 + (this.stopButton.width / 2);
+    this.stopButton.x = 20 + this.stopButton.width / 2;
     this.stopButton.y = controlsY;
 
     // Speed buttons (Right)
     const gap = 10;
-    let speedX = width - 20 - (this.speed12xButton.width / 2);
 
-    this.speed12xButton.x = speedX;
-    this.speed12xButton.y = controlsY;
-    speedX -= (this.speed12xButton.width / 2 + gap + this.speed4xButton.width / 2);
+    // Start with the rightmost element (4x button)
+    // We want it to be inside the screen, so width - 20 - half_width
+    let speedX = width - 20 - this.speed4xButton.width / 2;
 
     this.speed4xButton.x = speedX;
     this.speed4xButton.y = controlsY;
-    speedX -= (this.speed4xButton.width / 2 + gap + this.speed2xButton.width / 2);
+
+    // Move left for the next button
+    speedX -= this.speed4xButton.width / 2 + gap + this.speed2xButton.width / 2;
 
     this.speed2xButton.x = speedX;
     this.speed2xButton.y = controlsY;
-    speedX -= (this.speed2xButton.width / 2 + gap + this.speed1xButton.width / 2);
+
+    // Move left for the next button
+    speedX -= this.speed2xButton.width / 2 + gap + this.speed1xButton.width / 2;
 
     this.speed1xButton.x = speedX;
     this.speed1xButton.y = controlsY;
@@ -620,12 +604,11 @@ export class MetroSimulationScreen extends Container {
     // Map display
     const mapStartY = 120;
     const mapBottomMargin = 10;
-
-    const availableHeight = height - mapStartY - mapBottomMargin;
-    const availableWidth = width - 20;
-    
     const mapWidth = this.mapRenderer.getMapWidth();
     const mapHeight = this.mapRenderer.getMapHeight();
+
+    const availableWidth = width - 40; // 20px padding on sides
+    const availableHeight = height - mapStartY - mapBottomMargin;
 
     const scaleX = availableWidth / mapWidth;
     const scaleY = availableHeight / mapHeight;
@@ -645,7 +628,6 @@ export class MetroSimulationScreen extends Container {
       this.speed1xButton,
       this.speed2xButton,
       this.speed4xButton,
-      this.speed12xButton,
       this.mapContainer,
     ];
 
@@ -653,8 +635,11 @@ export class MetroSimulationScreen extends Container {
       element.alpha = 0;
     }
 
-    await animate(elementsToAnimate, { alpha: [0, 1] }, { duration: 0.3 })
-      .finished;
+    await animate(
+      elementsToAnimate,
+      { alpha: 1 },
+      { duration: 0.4, ease: "easeOut" },
+    );
   }
 
   /** Called by navigation system every frame */

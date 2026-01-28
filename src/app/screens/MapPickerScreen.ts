@@ -336,23 +336,23 @@ export class MapPickerScreen extends Container {
     // --- Row 1: Seed Controls (Y=80) ---
     const row1Y = 80;
     const gap = 10;
-    
+
     // Defined widths for calculation (based on initialization)
-    const wLabel = 60;  // Approx for "Seed:"
-    const wDec = 50;    // Button width
-    const wVal = 80;    // Approx for "000"
-    const wInc = 50;    // Button width
-    const wRand = 120;  // Random button (widened slightly for balance)
-    const wGen = 120;   // Generate button
+    const wLabel = 60; // Approx for "Seed:"
+    const wDec = 50; // Button width
+    const wVal = 80; // Approx for "000"
+    const wInc = 50; // Button width
+    const wRand = 120; // Random button (widened slightly for balance)
+    const wGen = 120; // Generate button
 
     // Calculate total width to center the group
     // Group: [Seed:] [Dec] [Val] [Inc]  --Gap-- [Random] [Generate]
     const seedGroupWidth = wLabel + gap + wDec + gap + wVal + gap + wInc;
     const actionGroupWidth = wRand + gap + wGen;
     const groupGap = 30; // Gap between seed selector and action buttons
-    
+
     const totalRow1Width = seedGroupWidth + groupGap + actionGroupWidth;
-    let currentX = centerX - (totalRow1Width / 2);
+    let currentX = centerX - totalRow1Width / 2;
 
     // Seed Label
     this.seedLabel.x = currentX + wLabel / 2;
@@ -384,16 +384,14 @@ export class MapPickerScreen extends Container {
     this.generateButton.x = currentX + wGen / 2;
     this.generateButton.y = row1Y;
 
-
     // --- Row 2: Type Info (Y=125) ---
     const rowInfoY = 125;
     this.mapTypeLabel.x = centerX;
     this.mapTypeLabel.y = rowInfoY;
 
-
     // --- Row 3: Visualization & Start (Y=165) ---
     const row2Y = 170;
-    
+
     // Widths
     const wVizDef = 100;
     const wVizRes = 120;
@@ -402,8 +400,17 @@ export class MapPickerScreen extends Container {
     const wStart = 160;
     const startGap = 40; // Gap before START button
 
-    const totalRow2Width = wVizDef + gap + wVizRes + gap + wVizOff + gap + wVizBoth + startGap + wStart;
-    currentX = centerX - (totalRow2Width / 2);
+    const totalRow2Width =
+      wVizDef +
+      gap +
+      wVizRes +
+      gap +
+      wVizOff +
+      gap +
+      wVizBoth +
+      startGap +
+      wStart;
+    currentX = centerX - totalRow2Width / 2;
 
     // Default
     this.showDefaultButton.x = currentX + wVizDef / 2;
@@ -430,11 +437,10 @@ export class MapPickerScreen extends Container {
     this.startButton.x = currentX + wStart / 2;
     this.startButton.y = row2Y;
 
-
     // --- Map Display ---
     const mapStartY = 210;
     const mapBottomMargin = 10;
-    
+
     const availableHeight = height - mapStartY - mapBottomMargin;
     const availableWidth = width - 40;
 

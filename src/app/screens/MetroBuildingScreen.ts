@@ -448,6 +448,12 @@ export class MetroBuildingScreen extends Container {
    * Load game state (for restoring saved game)
    */
   public setGameState(gameState: GameState): void {
+    if (!gameState) {
+      console.error(
+        "MetroBuildingScreen.setGameState called with undefined gameState",
+      );
+      return;
+    }
     this.gameState = gameState;
 
     // Ensure simulationTime is valid
@@ -765,7 +771,7 @@ export class MetroBuildingScreen extends Container {
     this.instructionLabel.y = topBarY + 30;
 
     // Reset button at top right
-    this.resetButton.x = width - 20 - (this.resetButton.width / 2);
+    this.resetButton.x = width - 20 - this.resetButton.width / 2;
     this.resetButton.y = topBarY;
 
     // Clock to left of Reset Control
@@ -778,37 +784,51 @@ export class MetroBuildingScreen extends Container {
     const gap = 15;
 
     // Left: Station and Line controls
-    let leftX = 20 + (this.addStationButton.width / 2);
+    let leftX = 20 + this.addStationButton.width / 2;
 
     this.addStationButton.x = leftX;
     this.addStationButton.y = row1Y;
-    leftX += this.addStationButton.width / 2 + gap + this.removeStationButton.width / 2;
+    leftX +=
+      this.addStationButton.width / 2 +
+      gap +
+      this.removeStationButton.width / 2;
 
     this.removeStationButton.x = leftX;
     this.removeStationButton.y = row1Y;
-    leftX += this.removeStationButton.width / 2 + gap * 2 + this.addLineButton.width / 2;
+    leftX +=
+      this.removeStationButton.width / 2 +
+      gap * 2 +
+      this.addLineButton.width / 2;
 
     this.addLineButton.x = leftX;
     this.addLineButton.y = row1Y;
-    leftX += this.addLineButton.width / 2 + gap + this.completeLineButton.width / 2;
+    leftX +=
+      this.addLineButton.width / 2 + gap + this.completeLineButton.width / 2;
 
     this.completeLineButton.x = leftX;
     this.completeLineButton.y = row1Y;
 
     // Right: Visualization controls
-    let rightX = width - 20 - (this.showBothButton.width / 2);
+    let rightX = width - 20 - this.showBothButton.width / 2;
 
     this.showBothButton.x = rightX;
     this.showBothButton.y = row1Y;
-    rightX -= (this.showBothButton.width / 2 + gap + this.showOfficeButton.width / 2);
+    rightX -=
+      this.showBothButton.width / 2 + gap + this.showOfficeButton.width / 2;
 
     this.showOfficeButton.x = rightX;
     this.showOfficeButton.y = row1Y;
-    rightX -= (this.showOfficeButton.width / 2 + gap + this.showResidentialButton.width / 2);
+    rightX -=
+      this.showOfficeButton.width / 2 +
+      gap +
+      this.showResidentialButton.width / 2;
 
     this.showResidentialButton.x = rightX;
     this.showResidentialButton.y = row1Y;
-    rightX -= (this.showResidentialButton.width / 2 + gap + this.showDefaultButton.width / 2);
+    rightX -=
+      this.showResidentialButton.width / 2 +
+      gap +
+      this.showDefaultButton.width / 2;
 
     this.showDefaultButton.x = rightX;
     this.showDefaultButton.y = row1Y;
@@ -825,7 +845,8 @@ export class MetroBuildingScreen extends Container {
     });
 
     // Right: Start Simulation button
-    this.startSimulationButton.x = width - 20 - (this.startSimulationButton.width / 2);
+    this.startSimulationButton.x =
+      width - 20 - this.startSimulationButton.width / 2;
     this.startSimulationButton.y = row2Y;
 
     // Map display
