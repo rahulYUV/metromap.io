@@ -13,6 +13,8 @@ import {
   BASE_GAME_SPEED,
   GAME_START_TIME_ISO,
   TRAIN_DEFAULT_SPEED,
+  TRAIN_STOP_DURATION_SQUARES,
+  TRAIN_ACCEL_DECEL_DISTANCE,
 } from "../game/config";
 import type { GameState } from "../game/models/GameState";
 import { saveGameState } from "../game/models/GameState";
@@ -328,67 +330,131 @@ export class MetroSimulationScreen extends Container {
       if (!line.trains) continue;
 
       for (const train of line.trains) {
+        // Migration/Safety initialization
+        if (!train.state) {
+          train.state = "MOVING";
+          train.dwellRemaining = 0;
+        }
+
         if (!train.currentSegment) {
           this.updateTrainPath(train, line);
           if (!train.currentSegment) continue; // Should not happen unless line invalid
         }
 
-        // Calculate movement distance
-        const moveDist = TRAIN_DEFAULT_SPEED * deltaSeconds;
-        const progressIncrement = moveDist / train.totalLength;
+        // Handle STOPPED state (Dwell time)
+        if (train.state === "STOPPED") {
+          // Decrease dwell time "distance" based on default speed
+          // This ensures stop time scales with game speed and configuration
+          const dwellDecrease = TRAIN_DEFAULT_SPEED * deltaSeconds;
+          train.dwellRemaining -= dwellDecrease;
 
-        train.progress += progressIncrement;
-
-        // Check if reached destination
-        if (train.progress >= 1.0) {
-          // Arrived at station
-          train.currentStationIdx = train.targetStationIdx;
-          train.progress = 0; // Reset progress (lose overflow for simplicity or can carry over)
-
-          // Determine next target and direction BEFORE passenger boarding
-          // This ensures passengers see the correct direction when deciding to board
-          if (line.isLoop) {
-            // Circular movement
-            if (train.direction === 1) {
-              train.targetStationIdx =
-                (train.currentStationIdx + 1) % line.stationIds.length;
-            } else {
-              train.targetStationIdx =
-                (train.currentStationIdx - 1 + line.stationIds.length) %
-                line.stationIds.length;
-            }
+          if (train.dwellRemaining <= 0) {
+            train.state = "MOVING";
+            train.dwellRemaining = 0;
+            // Proceed to acceleration immediately in this frame?
+            // Fall through to moving logic?
+            // Ideally yes, but for simplicity let's wait next frame or fall through.
+            // Let's fall through to allow instant start.
           } else {
-            // Linear movement
-            if (train.direction === 1) {
-              if (train.currentStationIdx >= line.stationIds.length - 1) {
-                // Reached end, reverse
-                train.direction = -1;
-                train.targetStationIdx = train.currentStationIdx - 1;
+            continue; // Still stopped
+          }
+        }
+
+        // Handle MOVING state
+        if (train.state === "MOVING") {
+          const distTotal = train.totalLength;
+          const distCovered = train.progress * distTotal;
+          const distRemaining = distTotal - distCovered;
+
+          // Acceleration/Deceleration Logic
+          let speedFactor = 1.0;
+
+          // Accelerate when leaving previous station
+          if (distCovered < TRAIN_ACCEL_DECEL_DISTANCE) {
+            // Ramp from 0 to 1. Use max(0.1) to ensure movement.
+            const accelFactor = Math.max(
+              0.1,
+              distCovered / TRAIN_ACCEL_DECEL_DISTANCE,
+            );
+            speedFactor = Math.min(speedFactor, accelFactor);
+          }
+
+          // Decelerate when approaching next station
+          if (distRemaining < TRAIN_ACCEL_DECEL_DISTANCE) {
+            const decelFactor = Math.max(
+              0.1,
+              distRemaining / TRAIN_ACCEL_DECEL_DISTANCE,
+            );
+            speedFactor = Math.min(speedFactor, decelFactor);
+          }
+
+          // Calculate movement distance
+          const currentSpeed = TRAIN_DEFAULT_SPEED * speedFactor;
+          const moveDist = currentSpeed * deltaSeconds;
+          
+          // Avoid division by zero for zero-length segments
+          const progressIncrement =
+            train.totalLength > 0 ? moveDist / train.totalLength : 1;
+
+          train.progress += progressIncrement;
+
+          // Check if reached destination
+          if (train.progress >= 1.0) {
+            // Arrived at station -> SWITCH TO STOPPED STATE
+            
+            // Snap to end
+            train.currentStationIdx = train.targetStationIdx;
+            train.progress = 0; // Reset progress for next segment
+
+            // Set state to stopped
+            train.state = "STOPPED";
+            train.dwellRemaining = TRAIN_STOP_DURATION_SQUARES;
+
+            // Determine next target and direction BEFORE passenger boarding
+            // This ensures passengers see the correct direction when deciding to board
+            if (line.isLoop) {
+              // Circular movement
+              if (train.direction === 1) {
+                train.targetStationIdx =
+                  (train.currentStationIdx + 1) % line.stationIds.length;
               } else {
-                train.targetStationIdx = train.currentStationIdx + 1;
+                train.targetStationIdx =
+                  (train.currentStationIdx - 1 + line.stationIds.length) %
+                  line.stationIds.length;
               }
             } else {
-              if (train.currentStationIdx <= 0) {
-                // Reached start, reverse
-                train.direction = 1;
-                train.targetStationIdx = train.currentStationIdx + 1;
+              // Linear movement
+              if (train.direction === 1) {
+                if (train.currentStationIdx >= line.stationIds.length - 1) {
+                  // Reached end, reverse
+                  train.direction = -1;
+                  train.targetStationIdx = train.currentStationIdx - 1;
+                } else {
+                  train.targetStationIdx = train.currentStationIdx + 1;
+                }
               } else {
-                train.targetStationIdx = train.currentStationIdx - 1;
+                if (train.currentStationIdx <= 0) {
+                  // Reached start, reverse
+                  train.direction = 1;
+                  train.targetStationIdx = train.currentStationIdx + 1;
+                } else {
+                  train.targetStationIdx = train.currentStationIdx - 1;
+                }
               }
             }
-          }
 
-          // Handle passenger boarding and alighting AFTER direction is set
-          const currentStationId = line.stationIds[train.currentStationIdx];
-          const currentStation = this.gameState.stations.find(
-            (s) => s.id === currentStationId,
-          );
-          if (currentStation) {
-            updatePassengerMovement(train, currentStation, this.gameState);
-          }
+            // Handle passenger boarding and alighting AFTER direction is set
+            const currentStationId = line.stationIds[train.currentStationIdx];
+            const currentStation = this.gameState.stations.find(
+              (s) => s.id === currentStationId,
+            );
+            if (currentStation) {
+              updatePassengerMovement(train, currentStation, this.gameState);
+            }
 
-          // Calculate new path
-          this.updateTrainPath(train, line);
+            // Calculate new path for the NEXT segment
+            this.updateTrainPath(train, line);
+          }
         }
       }
     }

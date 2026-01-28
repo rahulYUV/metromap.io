@@ -11,6 +11,8 @@ export const TILE_SIZE = 16; // Visual size in pixels of one grid square
 // --- Train Configuration ---
 export const TRAIN_MAX_CAPACITY = 30; // Maximum number of passengers per train
 export const TRAIN_DEFAULT_SPEED = 5; // Base train speed in grid squares per second
+export const TRAIN_STOP_DURATION_SQUARES = 2; // Time to stop is equivalent to covering this many squares
+export const TRAIN_ACCEL_DECEL_DISTANCE = 1; // Distance in squares to accelerate/decelerate
 
 // --- Spawning Configuration ---
 export const BASE_SPAWN_RATE = 0.2; // Base passengers per game-hour (before density modifiers)

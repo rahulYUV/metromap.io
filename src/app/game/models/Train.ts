@@ -5,9 +5,16 @@ import { TRAIN_MAX_CAPACITY } from "../config";
 // Train capacity constant
 export { TRAIN_MAX_CAPACITY };
 
+export type TrainState = "MOVING" | "STOPPED";
+
 export interface Train {
   id: string;
   lineId: string;
+
+  state: TrainState;
+  dwellRemaining: number; // Remaining dwell "distance" (virtual distance units)
+
+  // Position state
 
   // Position state
   currentStationIdx: number; // Index in line.stationIds
@@ -34,6 +41,8 @@ export function createTrain(
   return {
     id: `train-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
     lineId,
+    state: "MOVING",
+    dwellRemaining: 0,
     currentStationIdx: startStationIdx,
     targetStationIdx: startStationIdx + 1, // Will be fixed by logic if invalid
     progress: 0,
