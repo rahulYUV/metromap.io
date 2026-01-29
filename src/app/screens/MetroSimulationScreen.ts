@@ -23,6 +23,7 @@ import {
   initializeTrains,
   updateTrains,
 } from "../game/simulation/TrainMovement";
+import { formatMoney } from "../game/simulation/Economics";
 
 // Time progression speeds (milliseconds per real second)
 const SPEED_1X = BASE_GAME_SPEED;
@@ -36,6 +37,7 @@ export class MetroSimulationScreen extends Container {
   public static assetBundles = ["main"];
 
   private titleLabel: Label;
+  private moneyLabel: Label;
   private clockLabel: Label;
 
   private stopButton: FlatButton;
@@ -67,6 +69,18 @@ export class MetroSimulationScreen extends Container {
       },
     });
     this.addChild(this.titleLabel);
+
+    // Money display
+    this.moneyLabel = new Label({
+      text: "$10000",
+      style: {
+        fontSize: 24,
+        fill: 0x00ff00,
+        fontFamily: "monospace",
+        fontWeight: "bold",
+      },
+    });
+    this.addChild(this.moneyLabel);
 
     // Clock display
     this.clockLabel = new Label({
@@ -165,6 +179,16 @@ export class MetroSimulationScreen extends Container {
     const hours = date.getHours().toString().padStart(2, "0");
     const minutes = date.getMinutes().toString().padStart(2, "0");
     return `${day}/${month}/${year} ${hours}:${minutes}`;
+  }
+
+  /**
+   * Update money display with color coding
+   */
+  private updateMoneyDisplay(): void {
+    const money = this.gameState?.money ?? 0;
+    const { text, color } = formatMoney(money);
+    this.moneyLabel.text = text;
+    this.moneyLabel.style.fill = color;
   }
 
   /**
@@ -295,6 +319,9 @@ export class MetroSimulationScreen extends Container {
     const currentDate = new Date(this.gameState.simulationTime);
     this.clockLabel.text = this.formatDateTime(currentDate);
 
+    // Update money display
+    this.updateMoneyDisplay();
+
     // Update passenger spawning
     // The current implementation of spawner takes 'deltaSeconds' and multiplies by rate.
     // If rate is "per second", then passing real delta * multiplier simulates acceleration.
@@ -371,6 +398,9 @@ export class MetroSimulationScreen extends Container {
     // Update clock display
     const currentDate = new Date(this.gameState.simulationTime);
     this.clockLabel.text = this.formatDateTime(currentDate);
+
+    // Update money display
+    this.updateMoneyDisplay();
   }
 
   /**
@@ -415,6 +445,11 @@ export class MetroSimulationScreen extends Container {
     this.clockLabel.anchor.set(1, 0.5);
     this.clockLabel.x = width - 20;
     this.clockLabel.y = topBarY;
+
+    // Money display to left of clock
+    this.moneyLabel.anchor.set(1, 0.5);
+    this.moneyLabel.x = this.clockLabel.x - 200;
+    this.moneyLabel.y = topBarY;
 
     // Controls Row (Y=80)
     const controlsY = 80;
@@ -475,6 +510,7 @@ export class MetroSimulationScreen extends Container {
   public async show(): Promise<void> {
     const elementsToAnimate = [
       this.titleLabel,
+      this.moneyLabel,
       this.clockLabel,
       this.stopButton,
       this.pauseToggleButton,

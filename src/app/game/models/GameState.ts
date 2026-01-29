@@ -9,7 +9,8 @@ import { generateStationLabel } from "./Station";
 import type { MetroLine, LineColor } from "./MetroLine";
 import type { Passenger } from "./Passenger";
 import { storage } from "../../../engine/utils/storage";
-import { GAME_START_TIME_ISO } from "../config";
+import { GAME_START_TIME_ISO, STARTING_MONEY } from "../config";
+import { deductStationCost, deductLineCost } from "../simulation/Economics";
 
 const SAVE_GAME_KEY = "metromap-saved-game";
 
@@ -20,6 +21,7 @@ export interface GameState {
   lines: MetroLine[];
   passengers: Passenger[]; // Active passengers in the system (waiting or traveling)
   simulationTime: number; // Unix timestamp in milliseconds
+  money: number; // Current money in dollars (can be negative)
   // Future: trains, passengers, score, etc.
 }
 
@@ -36,6 +38,7 @@ export function createGameState(seed: number, map: MapGrid): GameState {
     lines: [],
     passengers: [],
     simulationTime: startDate.getTime(),
+    money: STARTING_MONEY,
   };
 }
 
@@ -49,6 +52,7 @@ export function hasLineWithColor(state: GameState, color: LineColor): boolean {
 /**
  * Add a line to the game state with validation
  * Returns true if successful, false if color already exists
+ * Deducts the line build cost from money
  */
 export function addLine(state: GameState, line: MetroLine): boolean {
   // Guard against duplicate colors
@@ -57,6 +61,9 @@ export function addLine(state: GameState, line: MetroLine): boolean {
     return false;
   }
 
+  // Deduct line build cost
+  deductLineCost(state, line);
+
   state.lines.push(line);
   saveGameState(state);
   return true;
@@ -64,12 +71,17 @@ export function addLine(state: GameState, line: MetroLine): boolean {
 
 /**
  * Add a station to the game state
+ * Deducts the station build cost from money
  */
 export function addStation(state: GameState, station: Station): void {
   // Assign label based on current station count if not already set
   if (!station.label) {
     station.label = generateStationLabel(state.stations.length);
   }
+
+  // Deduct station build cost
+  deductStationCost(state);
+
   state.stations.push(station);
   saveGameState(state);
 }
@@ -121,6 +133,11 @@ export function loadGameState(): GameState | null {
             station.label = generateStationLabel(index);
           }
         });
+      }
+
+      // Ensure money exists (for backward compatibility)
+      if (gameState.money === undefined || gameState.money === null) {
+        gameState.money = STARTING_MONEY;
       }
 
       return gameState;

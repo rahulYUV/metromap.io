@@ -9,6 +9,7 @@ import type { Station } from "../models/Station";
 import type { Passenger } from "../models/Passenger";
 import type { MetroLine } from "../models/MetroLine";
 import { TRAIN_MAX_CAPACITY } from "../config";
+import { addTicketRevenue } from "./Economics";
 
 /**
  * Check if a train is traveling towards a specific station
@@ -208,6 +209,9 @@ function completePassengerJourney(
   // Clear passenger state
   passenger.currentStationId = undefined;
   passenger.currentTrainId = undefined;
+
+  // Add ticket revenue for completed journey
+  addTicketRevenue(gameState);
 
   // Future: Update score, statistics, etc.
   // console.log(`Passenger ${passenger.id} completed journey from ${passenger.sourceStationId} to ${passenger.destinationStationId}`);

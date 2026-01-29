@@ -30,6 +30,7 @@ import {
 } from "../game/models/MetroLine";
 import { FlatButton } from "../ui/FlatButton";
 import { Label } from "../ui/Label";
+import { formatMoney } from "../game/simulation/Economics";
 
 type StationMode = "NONE" | "ADDING" | "REMOVING";
 type LineMode = "NONE" | "BUILDING";
@@ -40,6 +41,7 @@ export class MetroBuildingScreen extends Container {
 
   private titleLabel: Label;
   private instructionLabel: Label;
+  private moneyLabel: Label;
   private clockLabel: Label;
 
   private addStationButton: FlatButton;
@@ -95,6 +97,18 @@ export class MetroBuildingScreen extends Container {
       },
     });
     this.addChild(this.instructionLabel);
+
+    // Money display (before clock)
+    this.moneyLabel = new Label({
+      text: "$10000",
+      style: {
+        fontSize: 24,
+        fill: 0x00ff00, // Green for positive money
+        fontFamily: "monospace",
+        fontWeight: "bold",
+      },
+    });
+    this.addChild(this.moneyLabel);
 
     // Clock display
     this.clockLabel = new Label({
@@ -407,6 +421,16 @@ export class MetroBuildingScreen extends Container {
   }
 
   /**
+   * Update money display with color coding
+   */
+  private updateMoneyDisplay(): void {
+    const money = this.gameState?.money ?? 0;
+    const { text, color } = formatMoney(money);
+    this.moneyLabel.text = text;
+    this.moneyLabel.style.fill = color;
+  }
+
+  /**
    * Start the simulation
    */
   private async startSimulation(): Promise<void> {
@@ -443,6 +467,9 @@ export class MetroBuildingScreen extends Container {
       new Date("2025-01-01T08:00:00").getTime();
     const currentDate = new Date(time);
     this.clockLabel.text = this.formatDateTime(currentDate);
+
+    // Update money display
+    this.updateMoneyDisplay();
   }
 
   /**
@@ -472,6 +499,9 @@ export class MetroBuildingScreen extends Container {
     // Update clock display
     const currentDate = new Date(this.gameState.simulationTime);
     this.clockLabel.text = this.formatDateTime(currentDate);
+
+    // Update money display
+    this.updateMoneyDisplay();
   }
 
   /**
@@ -780,6 +810,11 @@ export class MetroBuildingScreen extends Container {
     this.clockLabel.x = width - 130;
     this.clockLabel.y = topBarY;
 
+    // Money display to left of clock
+    this.moneyLabel.anchor.set(1, 0.5);
+    this.moneyLabel.x = this.clockLabel.x - 200;
+    this.moneyLabel.y = topBarY;
+
     // --- Controls Row 1 (Y=100) ---
     const row1Y = 100;
     const gap = 15;
@@ -874,6 +909,7 @@ export class MetroBuildingScreen extends Container {
     const elementsToAnimate = [
       this.titleLabel,
       this.instructionLabel,
+      this.moneyLabel,
       this.clockLabel,
       this.addStationButton,
       this.removeStationButton,

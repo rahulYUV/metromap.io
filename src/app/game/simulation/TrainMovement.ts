@@ -19,6 +19,7 @@ import {
   type LineSegment,
 } from "../pathfinding/LinePath";
 import { updatePassengerMovement } from "./PassengerMovement";
+import { deductTrainRunningCost } from "./Economics";
 
 /**
  * Initialize trains on lines that don't have them
@@ -118,6 +119,9 @@ export function updateTrains(gameState: GameState, deltaSeconds: number): void {
         // Calculate movement distance
         const currentSpeed = TRAIN_DEFAULT_SPEED * speedFactor;
         const moveDist = currentSpeed * deltaSeconds;
+
+        // Deduct running cost for distance traveled
+        deductTrainRunningCost(gameState, moveDist);
 
         // Avoid division by zero for zero-length segments
         const progressIncrement =
