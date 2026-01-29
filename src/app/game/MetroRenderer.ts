@@ -291,6 +291,57 @@ export class MetroRenderer extends Container {
         this.trainsLayer.poly(tPoints.flatMap((p) => [p.x, p.y]));
         this.trainsLayer.fill(lineColor);
         this.trainsLayer.stroke({ width: 1, color: 0x000000 });
+
+        // Draw passenger density bars (3-bar indicator like battery)
+        const passengerCount = train.passengers.length;
+
+        // Determine number of bars to fill (0-3)
+        let filledBars = 0;
+        if (passengerCount > 0) {
+          // 0-10 passengers: 1 bar, 11-20: 2 bars, 21-30: 3 bars
+          filledBars = Math.min(3, Math.ceil(passengerCount / 10));
+        }
+
+        // Draw 3 bars inside the rectangular body
+        // Bar dimensions (in local coords)
+        const barSpacing = 0.8; // Space between bars
+        const barWidth = 2.5; // Width of each bar
+        const barHeight = h - 2; // Height with small margin
+
+        // Position bars inside the body (avoiding the head)
+        // Body extends from tailX (-8.25) to shoulderX (5.25)
+        // We'll place 3 bars with equal spacing
+        const bodyLength = shoulderX - tailX;
+        const totalBarsWidth = 3 * barWidth + 2 * barSpacing;
+        const barStartX = tailX + (bodyLength - totalBarsWidth) / 2;
+
+        for (let i = 0; i < 3; i++) {
+          const barX = barStartX + i * (barWidth + barSpacing);
+          const barY = -barHeight / 2;
+
+          // Create bar rectangle points (4 corners)
+          const barPoints = [
+            { x: barX, y: barY },
+            { x: barX + barWidth, y: barY },
+            { x: barX + barWidth, y: barY + barHeight },
+            { x: barX, y: barY + barHeight },
+          ];
+
+          // Transform bar points
+          const tBarPoints = barPoints.map((p) => ({
+            x: pos.x + (p.x * cos - p.y * sin),
+            y: pos.y + (p.x * sin + p.y * cos),
+          }));
+
+          this.trainsLayer.poly(tBarPoints.flatMap((p) => [p.x, p.y]));
+
+          // Fill bar if within filled count
+          if (i < filledBars) {
+            this.trainsLayer.fill({ color: 0xffffff, alpha: 0.8 }); // White fill
+          } else {
+            this.trainsLayer.fill({ color: 0x000000, alpha: 0.3 }); // Dark empty
+          }
+        }
       }
     }
   }
