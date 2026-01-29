@@ -47,6 +47,7 @@ export class MetroSimulationScreen extends Container {
   private clockLabel: Label;
 
   private stopButton: FlatButton;
+  private pauseToggleButton: FlatButton;
   private speed1xButton: FlatButton;
   private speed2xButton: FlatButton;
   private speed4xButton: FlatButton;
@@ -58,6 +59,7 @@ export class MetroSimulationScreen extends Container {
 
   private gameState!: GameState;
   private isRunning: boolean = false;
+  private isPaused: boolean = false;
   private currentSpeed: SimulationSpeed = "1x";
   private lastUpdateTime: number = 0;
 
@@ -95,6 +97,17 @@ export class MetroSimulationScreen extends Container {
     });
     this.stopButton.onPress.connect(() => this.stopSimulation());
     this.addChild(this.stopButton);
+
+    // Pause/Resume simulation button
+    this.pauseToggleButton = new FlatButton({
+      text: "Pause",
+      width: 100,
+      height: 50,
+      fontSize: 18,
+      backgroundColor: 0xf39c12,
+    });
+    this.pauseToggleButton.onPress.connect(() => this.togglePause());
+    this.addChild(this.pauseToggleButton);
 
     // Speed control buttons
     this.speed1xButton = new FlatButton({
@@ -229,6 +242,21 @@ export class MetroSimulationScreen extends Container {
   }
 
   /**
+   * Toggle simulation pause state
+   */
+  private togglePause(): void {
+    this.isPaused = !this.isPaused;
+
+    if (this.isPaused) {
+      this.pauseToggleButton.text = "Resume";
+      (this.pauseToggleButton.defaultView as Graphics).tint = 0x27ae60; // Green for Resume
+    } else {
+      this.pauseToggleButton.text = "Pause";
+      (this.pauseToggleButton.defaultView as Graphics).tint = 0xf39c12; // Orange for Pause
+    }
+  }
+
+  /**
    * Update simulation - called every frame
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -236,6 +264,12 @@ export class MetroSimulationScreen extends Container {
     if (!this.isRunning) return;
 
     const currentTime = performance.now();
+
+    if (this.isPaused) {
+      this.lastUpdateTime = currentTime;
+      return;
+    }
+
     const deltaSeconds = (currentTime - this.lastUpdateTime) / 1000;
     this.lastUpdateTime = currentTime;
 
@@ -284,6 +318,10 @@ export class MetroSimulationScreen extends Container {
    */
   public startSimulation(): void {
     this.isRunning = true;
+    this.isPaused = false;
+    this.pauseToggleButton.text = "Pause";
+    (this.pauseToggleButton.defaultView as Graphics).tint = 0xf39c12;
+
     this.lastUpdateTime = performance.now();
 
     // Initialize trains if needed
@@ -650,6 +688,14 @@ export class MetroSimulationScreen extends Container {
     this.stopButton.x = 20 + this.stopButton.width / 2;
     this.stopButton.y = controlsY;
 
+    // Pause/Resume Button
+    this.pauseToggleButton.x =
+      this.stopButton.x +
+      this.stopButton.width / 2 +
+      10 +
+      this.pauseToggleButton.width / 2;
+    this.pauseToggleButton.y = controlsY;
+
     // Speed buttons (Right)
     const gap = 10;
 
@@ -696,6 +742,7 @@ export class MetroSimulationScreen extends Container {
       this.titleLabel,
       this.clockLabel,
       this.stopButton,
+      this.pauseToggleButton,
       this.speed1xButton,
       this.speed2xButton,
       this.speed4xButton,
