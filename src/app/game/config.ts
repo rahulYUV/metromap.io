@@ -32,4 +32,4 @@ export const STARTING_MONEY = 10000; // Starting cash in dollars
 export const STATION_BUILD_COST = 500; // Cost to build one station
 export const LINE_BUILD_COST_PER_SQUARE = 50; // Cost per grid square to build a line
 export const TRAIN_RUNNING_COST_PER_SQUARE = 2; // Cost per grid square for train travel
-export const TICKET_REVENUE = 1; // Revenue per completed passenger journey
+export const TICKET_REVENUE = 2; // Revenue per completed passenger journey
