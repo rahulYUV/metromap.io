@@ -922,14 +922,29 @@ export class MetroBuildingScreen extends Container {
     direction: 1 | -1,
     startStationIdx: number,
   ): Train {
+    // Calculate target station index based on direction, handling edge cases
+    // Note: In edge cases where target equals current (e.g., backward train at station 0),
+    // the simulation will immediately trigger arrival logic, which then recalculates
+    // the next valid target based on line type and direction (see TrainMovement.ts)
+    let targetStationIdx: number;
+    if (direction === 1) {
+      // Moving forward - clamp to last station
+      targetStationIdx = Math.min(
+        startStationIdx + 1,
+        line.stationIds.length - 1,
+      );
+    } else {
+      // Moving backward - clamp to first station
+      targetStationIdx = Math.max(startStationIdx - 1, 0);
+    }
+
     const train: Train = {
       id: `train-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       lineId: line.id,
       state: "MOVING" as const,
       dwellRemaining: 0,
       currentStationIdx: startStationIdx,
-      targetStationIdx:
-        direction === 1 ? startStationIdx + 1 : startStationIdx - 1,
+      targetStationIdx,
       progress: 0,
       direction,
       currentSegment: null,

@@ -140,6 +140,15 @@ export function loadGameState(): GameState | null {
         gameState.money = STARTING_MONEY;
       }
 
+      // Ensure each line has a trains array (for backward compatibility)
+      if (gameState.lines) {
+        gameState.lines.forEach((line) => {
+          if (!line.trains) {
+            line.trains = [];
+          }
+        });
+      }
+
       return gameState;
     }
   } catch (e) {
