@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer circle -->
+  <circle cx="256" cy="256" r="230" stroke="#e72264" stroke-width="24" fill="none" opacity="0.9"/>
+  
+  <!-- Inner circles (metro stations/nodes) -->
+  <circle cx="256" cy="120" r="18" fill="#e72264"/>
+  <circle cx="120" cy="256" r="18" fill="#e72264"/>
+  <circle cx="392" cy="256" r="18" fill="#e72264"/>
+  <circle cx="256" cy="392" r="18" fill="#e72264"/>
+  
+  <!-- M shape path (simplified metro lines) -->
+  <path d="M 150 360 L 150 160 L 256 280 L 362 160 L 362 360" 
+        stroke="white" 
+        stroke-width="20" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+</svg>
