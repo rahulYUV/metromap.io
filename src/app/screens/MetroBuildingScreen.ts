@@ -868,22 +868,36 @@ export class MetroBuildingScreen extends Container {
     const direction = trainNumber % 2 === 1 ? 1 : -1;
 
     // Trains 3+ start with delay (half the line length)
-    const startStationIdx =
-      trainNumber <= 2
-        ? 0
-        : direction === 1
-          ? Math.floor(line.stationIds.length / 2)
-          : line.stationIds.length - 1 - Math.floor(line.stationIds.length / 2);
+    const startStationIdx = this.calculateStartStationIdx(
+      trainNumber,
+      direction,
+      line.stationIds.length,
+    );
 
     const train = this.createTrainForLine(line, direction, startStationIdx);
     line.trains.push(train);
 
-    console.log(
-      `Added train ${trainNumber} to ${line.color} line (direction: ${direction}, start: ${startStationIdx})`,
-    );
-
     saveGameState(this.gameState);
     this.updateLineList();
+  }
+
+  /**
+   * Calculate starting station index for a train based on train number and direction
+   */
+  private calculateStartStationIdx(
+    trainNumber: number,
+    direction: 1 | -1,
+    stationCount: number,
+  ): number {
+    if (trainNumber <= 2) {
+      return 0;
+    }
+
+    if (direction === 1) {
+      return Math.floor(stationCount / 2);
+    } else {
+      return stationCount - 1 - Math.floor(stationCount / 2);
+    }
   }
 
   /**
@@ -895,8 +909,6 @@ export class MetroBuildingScreen extends Container {
 
     // Remove the last train
     line.trains.pop();
-
-    console.log(`Removed train from ${line.color} line`);
 
     saveGameState(this.gameState);
     this.updateLineList();
@@ -911,7 +923,7 @@ export class MetroBuildingScreen extends Container {
     startStationIdx: number,
   ): Train {
     const train: Train = {
-      id: `train-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      id: `train-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       lineId: line.id,
       state: "MOVING" as const,
       dwellRemaining: 0,
