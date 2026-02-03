@@ -106,10 +106,10 @@ export class MetroSimulationScreen extends Container {
 
     // Pause/Resume simulation button
     this.pauseToggleButton = new FlatButton({
-      text: "Pause",
-      width: 100,
+      text: "⏸",
+      width: 60,
       height: 50,
-      fontSize: 18,
+      fontSize: 24,
       backgroundColor: 0xf39c12,
     });
     this.pauseToggleButton.onPress.connect(() => this.togglePause());
@@ -264,10 +264,10 @@ export class MetroSimulationScreen extends Container {
     this.isPaused = !this.isPaused;
 
     if (this.isPaused) {
-      this.pauseToggleButton.text = "Resume";
+      this.pauseToggleButton.text = "▶";
       (this.pauseToggleButton.defaultView as Graphics).tint = 0x27ae60; // Green for Resume
     } else {
-      this.pauseToggleButton.text = "Pause";
+      this.pauseToggleButton.text = "⏸";
       (this.pauseToggleButton.defaultView as Graphics).tint = 0xf39c12; // Orange for Pause
     }
   }
@@ -338,7 +338,7 @@ export class MetroSimulationScreen extends Container {
   public startSimulation(): void {
     this.isRunning = true;
     this.isPaused = false;
-    this.pauseToggleButton.text = "Pause";
+    this.pauseToggleButton.text = "⏸";
     (this.pauseToggleButton.defaultView as Graphics).tint = 0xf39c12;
 
     this.lastUpdateTime = performance.now();
@@ -460,14 +460,6 @@ export class MetroSimulationScreen extends Container {
     this.stopButton.x = 20 + this.stopButton.width / 2;
     this.stopButton.y = controlsY;
 
-    // Pause/Resume Button
-    this.pauseToggleButton.x =
-      this.stopButton.x +
-      this.stopButton.width / 2 +
-      10 +
-      this.pauseToggleButton.width / 2;
-    this.pauseToggleButton.y = controlsY;
-
     // Speed buttons (Right)
     const gap = 10;
 
@@ -489,6 +481,13 @@ export class MetroSimulationScreen extends Container {
 
     this.speed1xButton.x = speedX;
     this.speed1xButton.y = controlsY;
+
+    // Pause/Resume Button (to the left of 1x button)
+    speedX -=
+      this.speed1xButton.width / 2 + gap + this.pauseToggleButton.width / 2;
+
+    this.pauseToggleButton.x = speedX;
+    this.pauseToggleButton.y = controlsY;
 
     // Map display
     const mapStartY = 120;
