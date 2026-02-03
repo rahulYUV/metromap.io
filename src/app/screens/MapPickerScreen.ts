@@ -9,6 +9,7 @@ import { Container, Graphics } from "pixi.js";
 import { engine } from "../getEngine";
 import { MapGenerator } from "../game/MapGenerator";
 import { MapRenderer } from "../game/MapRenderer";
+import { Footer } from "../ui/Footer";
 import type { MapGrid } from "../game/models/MapGrid";
 import { FlatButton } from "../ui/FlatButton";
 import { Label } from "../ui/Label";
@@ -39,6 +40,7 @@ export class MapPickerScreen extends Container {
   private mapRenderer: MapRenderer;
   private mapContainer: Container;
   private mapBackground: Graphics;
+  private footer: Footer;
 
   private currentSeed: number = 0;
   private currentMap: MapGrid | null = null;
@@ -204,6 +206,10 @@ export class MapPickerScreen extends Container {
 
     // Generate initial map
     this.generateMap();
+
+    // Footer
+    this.footer = new Footer();
+    this.addChild(this.footer);
   }
 
   /**
@@ -455,6 +461,9 @@ export class MapPickerScreen extends Container {
     this.mapContainer.scale.set(mapScale);
     this.mapContainer.x = centerX - (mapWidth * mapScale) / 2;
     this.mapContainer.y = mapStartY;
+
+    // Footer
+    this.footer.resize(width, height);
   }
 
   /** Show screen with animations */

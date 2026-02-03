@@ -3,6 +3,7 @@ import { animate } from "motion";
 import type { ObjectTarget } from "motion/react";
 import type { Ticker } from "pixi.js";
 import { Container, Graphics } from "pixi.js";
+import { Footer } from "../ui/Footer";
 
 /** Screen shown while loading assets */
 export class LoadScreen extends Container {
@@ -23,6 +24,7 @@ export class LoadScreen extends Container {
   private pathLength = 0;
   /** Progress Bar */
   private progressBar: CircularProgressBar;
+  private footer: Footer;
 
   constructor() {
     super();
@@ -51,6 +53,10 @@ export class LoadScreen extends Container {
     this.drawMetroSymbol();
     this.buildPath();
     this.createTrains();
+
+    // Footer
+    this.footer = new Footer();
+    this.addChild(this.footer);
   }
 
   public onLoad(progress: number) {
@@ -66,6 +72,7 @@ export class LoadScreen extends Container {
   public resize(width: number, height: number) {
     this.metroSymbol.position.set(width * 0.5, height * 0.5);
     this.progressBar.position.set(width * 0.5, height * 0.5);
+    this.footer.resize(width, height);
   }
 
   /** Show screen with animations */

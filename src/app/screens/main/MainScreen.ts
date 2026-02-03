@@ -8,6 +8,7 @@ import { engine } from "../../getEngine";
 import { PausePopup } from "../../popups/PausePopup";
 import { SettingsPopup } from "../../popups/SettingsPopup";
 import { Button } from "../../ui/Button";
+import { Footer } from "../../ui/Footer";
 
 import { Bouncer } from "./Bouncer";
 
@@ -23,6 +24,7 @@ export class MainScreen extends Container {
   private removeButton: FancyButton;
   private bouncer: Bouncer;
   private paused = false;
+  private footer: Footer;
 
   constructor() {
     super();
@@ -80,6 +82,10 @@ export class MainScreen extends Container {
     });
     this.removeButton.onPress.connect(() => this.bouncer.remove());
     this.addChild(this.removeButton);
+
+    // Footer
+    this.footer = new Footer();
+    this.addChild(this.footer);
   }
 
   /** Prepare the screen just before showing */
@@ -124,6 +130,9 @@ export class MainScreen extends Container {
     this.addButton.y = height - 75;
 
     this.bouncer.resize(width, height);
+
+    // Footer
+    this.footer.resize(width, height);
   }
 
   /** Show screen with animations */

@@ -18,6 +18,7 @@ import { saveGameState } from "../game/models/GameState";
 import type { Station } from "../game/models/Station";
 import { FlatButton } from "../ui/FlatButton";
 import { Label } from "../ui/Label";
+import { Footer } from "../ui/Footer";
 import { updatePassengerSpawning } from "../game/simulation/PassengerSpawner";
 import {
   initializeTrains,
@@ -50,6 +51,7 @@ export class MetroSimulationScreen extends Container {
   private metroRenderer: MetroRenderer;
   private mapContainer: Container;
   private mapBackground: Graphics;
+  private footer: Footer;
 
   private gameState!: GameState;
   private isRunning: boolean = false;
@@ -161,6 +163,10 @@ export class MetroSimulationScreen extends Container {
     // Metro Renderer (Lines, Trains, Stations)
     this.metroRenderer = new MetroRenderer();
     this.mapContainer.addChild(this.metroRenderer);
+
+    // Footer
+    this.footer = new Footer();
+    this.addChild(this.footer);
   }
 
   /**
@@ -505,6 +511,9 @@ export class MetroSimulationScreen extends Container {
     this.mapContainer.scale.set(mapScale);
     this.mapContainer.x = centerX - (mapWidth * mapScale) / 2;
     this.mapContainer.y = mapStartY;
+
+    // Footer
+    this.footer.resize(width, height);
   }
 
   /** Show screen with animations */

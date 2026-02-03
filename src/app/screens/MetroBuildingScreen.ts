@@ -31,6 +31,7 @@ import {
 import type { Train } from "../game/models/Train";
 import { FlatButton } from "../ui/FlatButton";
 import { Label } from "../ui/Label";
+import { Footer } from "../ui/Footer";
 import { formatMoney } from "../game/simulation/Economics";
 
 type StationMode = "NONE" | "ADDING" | "REMOVING";
@@ -77,6 +78,7 @@ export class MetroBuildingScreen extends Container {
   private metroRenderer: MetroRenderer;
   private mapContainer: Container;
   private mapBackground: Graphics;
+  private footer: Footer;
 
   private gameState!: GameState;
   private stationMode: StationMode = "NONE";
@@ -237,6 +239,10 @@ export class MetroBuildingScreen extends Container {
     });
     this.startSimulationButton.onPress.connect(() => this.startSimulation());
     this.addChild(this.startSimulationButton);
+
+    // Footer
+    this.footer = new Footer();
+    this.addChild(this.footer);
 
     // Create color picker buttons
     this.createColorButtons();
@@ -1166,6 +1172,9 @@ export class MetroBuildingScreen extends Container {
     this.mapContainer.x =
       mapLeftMargin + (availableWidth - mapWidth * mapScale) / 2;
     this.mapContainer.y = mapStartY;
+
+    // Footer
+    this.footer.resize(width, height);
   }
 
   /** Show screen with animations */
