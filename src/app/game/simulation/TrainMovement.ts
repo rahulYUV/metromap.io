@@ -36,7 +36,8 @@ export function initializeTrains(gameState: GameState): void {
 
       line.trains.push(train);
     } else {
-      // Ensure existing trains have paths (e.g. after reload)
+      // Trains already exist (created in building screen)
+      // Ensure existing trains have paths (e.g. after reload or first initialization)
       for (const train of line.trains) {
         // Ensure passengers array exists (for backward compatibility)
         if (!train.passengers) {

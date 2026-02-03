@@ -28,6 +28,7 @@ import {
   canAddStationToLine,
   isLineLoop,
 } from "../game/models/MetroLine";
+import type { Train } from "../game/models/Train";
 import { FlatButton } from "../ui/FlatButton";
 import { Label } from "../ui/Label";
 import { formatMoney } from "../game/simulation/Economics";
@@ -56,6 +57,21 @@ export class MetroBuildingScreen extends Container {
   private showBothButton: FlatButton;
 
   private colorButtons: Map<LineColor, FlatButton> = new Map();
+
+  // Line management UI
+  private lineListContainer: Container;
+  private lineListBackground: Graphics;
+  private lineItemsContainer: Container;
+  private lineControls: Map<
+    string,
+    {
+      container: Container;
+      label: Label;
+      countLabel: Label;
+      minusButton: FlatButton;
+      plusButton: FlatButton;
+    }
+  > = new Map();
 
   private mapRenderer: MapRenderer;
   private metroRenderer: MetroRenderer;
@@ -140,6 +156,16 @@ export class MetroBuildingScreen extends Container {
     // Make map interactive
     this.mapContainer.eventMode = "static";
     this.mapContainer.on("pointerdown", this.onMapClick.bind(this));
+
+    // Line list container (left side panel)
+    this.lineListContainer = new Container();
+    this.addChild(this.lineListContainer);
+
+    this.lineListBackground = new Graphics();
+    this.lineListContainer.addChild(this.lineListBackground);
+
+    this.lineItemsContainer = new Container();
+    this.lineListContainer.addChild(this.lineItemsContainer);
 
     // Add station button
     this.addStationButton = new FlatButton({
@@ -353,7 +379,7 @@ export class MetroBuildingScreen extends Container {
       return;
     }
 
-    // Create the line
+    // Create the line with 1 initial train
     const line: MetroLine = {
       id: generateLineId(),
       color: this.currentLine.color,
@@ -361,6 +387,10 @@ export class MetroBuildingScreen extends Container {
       isLoop: isLineLoop(this.currentLine.stationIds),
       trains: [],
     };
+
+    // Add the first train to the line
+    const train = this.createTrainForLine(line, 1, 0);
+    line.trains.push(train);
 
     // Add line with duplicate color guard
     const success = addLine(this.gameState, line);
@@ -720,6 +750,183 @@ export class MetroBuildingScreen extends Container {
       this.gameState.stations,
       tempLine,
     );
+
+    // Update line list UI
+    this.updateLineList();
+  }
+
+  /**
+   * Update the line list panel showing built lines with train controls
+   */
+  private updateLineList(): void {
+    // Clear existing line items
+    this.lineItemsContainer.removeChildren();
+    this.lineControls.clear();
+
+    const itemHeight = 60;
+    const itemSpacing = 10;
+    let yOffset = 10;
+
+    for (const line of this.gameState.lines) {
+      const trainCount = line.trains.length;
+
+      // Create container for this line item
+      const itemContainer = new Container();
+      itemContainer.y = yOffset;
+
+      // Background
+      const bg = new Graphics();
+      bg.roundRect(0, 0, 250, itemHeight - 5, 8);
+      bg.fill(LINE_COLOR_HEX[line.color]);
+      bg.alpha = 0.3;
+      itemContainer.addChild(bg);
+
+      // Line label (e.g., "Red Line")
+      const lineLabel = new Label({
+        text: `${line.color.charAt(0).toUpperCase() + line.color.slice(1)} Line`,
+        style: {
+          fontSize: 16,
+          fill: 0xffffff,
+          fontWeight: "bold",
+        },
+      });
+      lineLabel.anchor.set(0, 0.5);
+      lineLabel.x = 10;
+      lineLabel.y = (itemHeight - 5) / 2 - 10;
+      itemContainer.addChild(lineLabel);
+
+      // Train count label
+      const countLabel = new Label({
+        text: `Trains: ${trainCount}`,
+        style: {
+          fontSize: 14,
+          fill: 0xcccccc,
+        },
+      });
+      countLabel.anchor.set(0, 0.5);
+      countLabel.x = 10;
+      countLabel.y = (itemHeight - 5) / 2 + 10;
+      itemContainer.addChild(countLabel);
+
+      // Minus button
+      const minusButton = new FlatButton({
+        text: "-",
+        width: 30,
+        height: 30,
+        fontSize: 20,
+        backgroundColor: 0xe74c3c,
+      });
+      minusButton.x = 170;
+      minusButton.y = (itemHeight - 5) / 2;
+      minusButton.onPress.connect(() => this.decreaseTrainCount(line.id));
+      minusButton.alpha = trainCount > 1 ? 1.0 : 0.3;
+      minusButton.eventMode = trainCount > 1 ? "static" : "none";
+      itemContainer.addChild(minusButton);
+
+      // Plus button
+      const plusButton = new FlatButton({
+        text: "+",
+        width: 30,
+        height: 30,
+        fontSize: 20,
+        backgroundColor: 0x27ae60,
+      });
+      plusButton.x = 215;
+      plusButton.y = (itemHeight - 5) / 2;
+      plusButton.onPress.connect(() => this.increaseTrainCount(line.id));
+      plusButton.alpha = trainCount < 5 ? 1.0 : 0.3;
+      plusButton.eventMode = trainCount < 5 ? "static" : "none";
+      itemContainer.addChild(plusButton);
+
+      this.lineItemsContainer.addChild(itemContainer);
+
+      // Store references for updates
+      this.lineControls.set(line.id, {
+        container: itemContainer,
+        label: lineLabel,
+        countLabel,
+        minusButton,
+        plusButton,
+      });
+
+      yOffset += itemHeight + itemSpacing;
+    }
+  }
+
+  /**
+   * Increase train count for a line
+   */
+  private increaseTrainCount(lineId: string): void {
+    const line = this.gameState.lines.find((l) => l.id === lineId);
+    if (!line || line.trains.length >= 5) return;
+
+    // Get train count for direction and delay calculation
+    const trainNumber = line.trains.length + 1; // 1-indexed for user display
+
+    // Odd trains (1, 3, 5) move forward (direction 1)
+    // Even trains (2, 4) move backward (direction -1)
+    const direction = trainNumber % 2 === 1 ? 1 : -1;
+
+    // Trains 3+ start with delay (half the line length)
+    const startStationIdx =
+      trainNumber <= 2
+        ? 0
+        : direction === 1
+          ? Math.floor(line.stationIds.length / 2)
+          : line.stationIds.length - 1 - Math.floor(line.stationIds.length / 2);
+
+    const train = this.createTrainForLine(line, direction, startStationIdx);
+    line.trains.push(train);
+
+    console.log(
+      `Added train ${trainNumber} to ${line.color} line (direction: ${direction}, start: ${startStationIdx})`,
+    );
+
+    saveGameState(this.gameState);
+    this.updateLineList();
+  }
+
+  /**
+   * Decrease train count for a line
+   */
+  private decreaseTrainCount(lineId: string): void {
+    const line = this.gameState.lines.find((l) => l.id === lineId);
+    if (!line || line.trains.length <= 1) return;
+
+    // Remove the last train
+    line.trains.pop();
+
+    console.log(`Removed train from ${line.color} line`);
+
+    saveGameState(this.gameState);
+    this.updateLineList();
+  }
+
+  /**
+   * Create a train for a line with specific configuration
+   */
+  private createTrainForLine(
+    line: MetroLine,
+    direction: 1 | -1,
+    startStationIdx: number,
+  ): Train {
+    const train: Train = {
+      id: `train-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      lineId: line.id,
+      state: "MOVING" as const,
+      dwellRemaining: 0,
+      currentStationIdx: startStationIdx,
+      targetStationIdx:
+        direction === 1 ? startStationIdx + 1 : startStationIdx - 1,
+      progress: 0,
+      direction,
+      currentSegment: null,
+      totalLength: 0,
+      passengers: [],
+      capacity: 30, // TRAIN_MAX_CAPACITY
+    };
+
+    return train;
   }
 
   /**
@@ -786,8 +993,6 @@ export class MetroBuildingScreen extends Container {
 
   /** Resize the screen */
   public resize(width: number, height: number) {
-    const centerX = width * 0.5;
-
     // Top Bar (Y=30)
     const topBarY = 30;
 
@@ -885,12 +1090,34 @@ export class MetroBuildingScreen extends Container {
       width - 20 - this.startSimulationButton.width / 2;
     this.startSimulationButton.y = row2Y;
 
-    // Map display
+    // Line list panel (left side, below controls)
+    const lineListX = 20;
+    const lineListY = 200;
+    const lineListWidth = 270;
+    const lineListMaxHeight = height - lineListY - 10;
+
+    this.lineListContainer.x = lineListX;
+    this.lineListContainer.y = lineListY;
+
+    // Draw background for line list
+    this.lineListBackground.clear();
+    if (this.gameState && this.gameState.lines.length > 0) {
+      const lineListHeight = Math.min(
+        lineListMaxHeight,
+        this.gameState.lines.length * 70 + 20,
+      );
+      this.lineListBackground.roundRect(0, 0, lineListWidth, lineListHeight, 8);
+      this.lineListBackground.fill({ color: 0x222222, alpha: 0.8 });
+      this.lineListBackground.stroke({ color: 0x444444, width: 2 });
+    }
+
+    // Map display - adjust to make room for line list on the left
     const mapStartY = 190;
     const mapBottomMargin = 10;
+    const mapLeftMargin = lineListWidth + 40; // Space for line list
 
     const availableHeight = height - mapStartY - mapBottomMargin;
-    const availableWidth = width - 20;
+    const availableWidth = width - mapLeftMargin - 20;
 
     const mapWidth = this.mapRenderer.getMapWidth();
     const mapHeight = this.mapRenderer.getMapHeight();
@@ -899,7 +1126,8 @@ export class MetroBuildingScreen extends Container {
     const mapScale = Math.min(1, scaleX, scaleY);
 
     this.mapContainer.scale.set(mapScale);
-    this.mapContainer.x = centerX - (mapWidth * mapScale) / 2;
+    this.mapContainer.x =
+      mapLeftMargin + (availableWidth - mapWidth * mapScale) / 2;
     this.mapContainer.y = mapStartY;
   }
 
@@ -921,6 +1149,7 @@ export class MetroBuildingScreen extends Container {
       this.showOfficeButton,
       this.showBothButton,
       this.mapContainer,
+      this.lineListContainer,
     ];
 
     for (const element of elementsToAnimate) {
