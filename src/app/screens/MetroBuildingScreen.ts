@@ -1044,7 +1044,9 @@ export class MetroBuildingScreen extends Container {
 
     // Money display to left of clock
     this.moneyLabel.anchor.set(1, 0.5);
-    this.moneyLabel.x = this.clockLabel.x - 20;
+    const clockLeft = this.clockLabel.x - this.clockLabel.width;
+    const moneyGap = 20;
+    this.moneyLabel.x = clockLeft - moneyGap;
     this.moneyLabel.y = topBarY;
 
     // --- Controls Row 1 (Y=100) ---
