@@ -11,10 +11,9 @@ export class Footer extends Container {
   constructor(options?: { githubUrl?: string; authorUrl?: string }) {
     super();
 
-    const githubUrl = options?.githubUrl ??
-      "https://github.com/championswimmer/metromap.io";
-    const authorUrl = options?.authorUrl ??
-      "https://x.com/championswimmer";
+    const githubUrl =
+      options?.githubUrl ?? "https://github.com/championswimmer/metromap.io";
+    const authorUrl = options?.authorUrl ?? "https://x.com/championswimmer";
 
     // Left: Author credit
     this.leftLabel = new Label({
