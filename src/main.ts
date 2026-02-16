@@ -1,16 +1,15 @@
 import { setEngine } from "./app/getEngine";
-import { LoadScreen } from "./app/screens/LoadScreen";
-import { MapPickerScreen } from "./app/screens/MapPickerScreen";
-import { MetroBuildingScreen } from "./app/screens/MetroBuildingScreen";
+import { LoadScreen } from "./rendering/screens/LoadScreen";
+import { MapPickerScreen } from "./rendering/screens/MapPickerScreen";
+import { MetroBuildingScreen } from "./rendering/screens/MetroBuildingScreen";
 import { userSettings } from "./app/utils/userSettings";
 import { CreationEngine } from "./engine/engine";
-import { hasSavedGame, loadGameState } from "./app/game/models/GameState";
+import { hasSavedGame, loadGameState } from "./core/game/models/GameState";
 
 /**
- * Importing these modules will automatically register there plugins with the engine.
+ * Importing these modules will automatically register their plugins with the engine.
  */
 import "@pixi/sound";
-// import "@esotericsoftware/spine-pixi-v8";
 
 // Create a new creation engine instance
 const engine = new CreationEngine();

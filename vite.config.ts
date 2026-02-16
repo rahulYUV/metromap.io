@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { resolve } from "path";
 
 import { assetpackPlugin } from "./scripts/assetpack-vite-plugin";
 
@@ -6,6 +7,14 @@ import { assetpackPlugin } from "./scripts/assetpack-vite-plugin";
 export default defineConfig({
   base: "./",
   plugins: [assetpackPlugin()],
+  resolve: {
+    alias: {
+      "@core": resolve(__dirname, "src/core"),
+      "@rendering": resolve(__dirname, "src/rendering"),
+      "@engine": resolve(__dirname, "src/engine"),
+      "@app": resolve(__dirname, "src/app"),
+    },
+  },
   server: {
     port: 8080,
     open: true,
