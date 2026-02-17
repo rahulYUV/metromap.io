@@ -1166,7 +1166,8 @@ export class MetroBuildingScreen extends Container {
     const mapHeight = this.mapRenderer.getMapHeight();
     const scaleX = availableWidth / mapWidth;
     const scaleY = availableHeight / mapHeight;
-    const mapScale = Math.min(1, scaleX, scaleY);
+    const maxScale = 3;
+    const mapScale = Math.min(maxScale, scaleX, scaleY);
 
     this.mapContainer.scale.set(mapScale);
     this.mapContainer.x =
