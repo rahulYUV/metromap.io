@@ -875,7 +875,7 @@ export class MetroBuildingScreen extends Container {
 
       // Delete button
       const deleteButton = new FlatButton({
-        text: "🗑",
+        text: "🗑️",
         width: 30,
         height: 30,
         fontSize: 18,
